@@ -1,43 +1,52 @@
 <?php
+require("Twig.php");
 
 class Generation
 {
     private $className;
     private $properties = array();
-    private $functions = array();
     private $stopScript = false;
-    private $stopProperties = false;
+    private $twig;
 
     public function __construct()
     {
+        $twig = new Twig('templates');
+        $this->twig = $twig->getTwig();
         echo "Name of the class : \n";
         $handle = fopen("php://stdin", "r");
-        $this->className = fgets($handle);
+        $classNameTemp = fgets($handle);
+        $this->className = trim($classNameTemp);
         fclose($handle);
+        while (!$this->stopScript) {
+            echo "Name of attr (:q to quit) : \n";
+            $attr = fopen("php://stdin", "r");
+            $content = fgets($attr);
+            if (trim($content) == ":q") {
+                $this->stopScript = true;
+            } else {
+                $this->properties[] = trim($content);
+            }
+            fclose($attr);
+        }
         $this->createServiceClass();
         $this->createRepositoryClass();
-/*        while (!$this->stopScript) {
-            while (!$this->stopProperties) {
-                
-            }
-        }*/
     }
 
-    private function createServiceClass(){
-        /*$content =
-            "<?php\n\nClass " . $this->className . "{\nprivate ". '$' . $this->className ."Repository;\n }";
-        file_put_contents($this->className .'Service.php', $content);*/
-        $fp = fopen($this->className . 'Service.php', 'w');
-        fwrite($fp, "<?php\n");
-        fwrite($fp, 'Class ' . $this->className);
-        fwrite($fp, "{\n");
-        fwrite($fp, 'private ' . '$' . $this->className);
-        fwrite($fp, '}');
+    private function createServiceClass()
+    {
+        $name = trim($this->className . "Service.php");
+        $name = $name = preg_replace("/[\n\r]/", "", $name);
+        $template = $this->twig->render('serviceClass.twig', array("class" => $this->className, "properties" => $this->properties));
+        file_put_contents($name, $template);
     }
 
-    private function createRepositoryClass(){
-        $content = "<?php\n\nClass " . $this->className . "{\n\n}";
-        file_put_contents($this->className .'Repository.php', $content);
+    private function createRepositoryClass()
+    {
+        $name = trim($this->className . "Repository.php");
+        $name = preg_replace("/[\n\r]/", "", $name);
+        $template = $this->twig->render('repositoryClass.twig', array("class" => $this->className, "properties" => $this->properties));
+        file_put_contents($name, $template);
+
     }
 
 }
